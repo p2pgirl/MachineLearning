@@ -5,6 +5,7 @@ import pickle
 sys.path.append("../tools/")
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from time import time
 from feature_format import featureFormat, targetFeatureSplit
@@ -41,6 +42,7 @@ def best_features_suggestion(data_dict, most_features_list):
     scores_tuples = zip(most_features_list[1:], scores)
     scores_tuples_sorted = list(reversed(sorted(scores_tuples, key=lambda x: x[1])))
     print "K Best Features: ", scores_tuples_sorted
+    
 
 def employee_listing():
     temp_emp_list = list()
@@ -108,6 +110,20 @@ def dataexplore(employee_list):
     print 'Number of Employees NaN Payments', total_payments_null
     print
     
+    
+    category_names = ['Missing Data', 'Data Supplied']    
+    
+    results = {
+    'Employee Emails': [email_count_null, no_of_employees - email_count_null],
+    'Employee Salary': [salary_count_null, no_of_employees  - salary_count_null],
+    'Employee Bonus': [bonus_count_null, no_of_employees - bonus_count_null],
+    'Employee Exercised Stock Opt': [exer_stock_null, no_of_employees - exer_stock_null],
+    'Employee with Payments': [total_payments_null, no_of_employees - total_payments_null]
+    }
+    
+    survey(results, category_names)
+    plt.show()
+    
     #What percentage of people in the dataset as a whole is this? 
     percentage_with_payments = (float(total_payments_null)/no_of_employees) * 100
     print "Percentage of Employees with Payments: %.2f" % percentage_with_payments + "%"
@@ -153,6 +169,37 @@ def dataexplore(employee_list):
 
 ###END: dataexplore()    
 
+def survey(results, category_names):
+    """
+    displays plot for employee data
+    """
+    labels = list(results.keys())
+    data = np.array(list(results.values()))
+    data_cum = data.cumsum(axis=1)
+    category_colors = plt.get_cmap('RdYlGn')(
+        np.linspace(0.15, 0.85, data.shape[1]))
+
+    fig, ax = plt.subplots(figsize=(9.2, 5))
+    ax.invert_yaxis()
+    ax.xaxis.set_visible(False)
+    ax.set_xlim(0, np.sum(data, axis=1).max())
+
+    for i, (colname, color) in enumerate(zip(category_names, category_colors)):
+        widths = data[:, i]
+        starts = data_cum[:, i] - widths
+        ax.barh(labels, widths, left=starts, height=0.5,
+                label=colname, color=color)
+        xcenters = starts + widths / 2
+
+        r, g, b, _ = color
+        text_color = 'white' if r * g * b < 0.5 else 'darkgrey'
+        for y, (x, c) in enumerate(zip(xcenters, widths)):
+            ax.text(x, y, str(int(c)), ha='center', va='center',
+                    color=text_color)
+    ax.legend(ncol=len(category_names), bbox_to_anchor=(0, 1),
+              loc='lower left', fontsize='small')
+
+    return fig, ax
 
 ###
 ### TASK 2: Remove outliers
@@ -299,6 +346,23 @@ def new_features(data_dict):
         data_point["fraction_to_poi"] = fraction_to_poi  
 
 ###END: new_features()
+        
+def plot_features_list_test():
+    d = {'No. of Features': [2, 4, 7, 8, 9, 11], 
+     'F1 Accuracy': [0.44, 0.18, 0.44, 0.5, 0.8, 0.67]}
+
+    df = pd.DataFrame(data=d)
+    
+    plt.plot( 'No. of Features', 'F1 Accuracy', data=df, color='orange')
+      
+    # Add titles
+    plt.title("Adaboost Classifier with Decision Tree", 
+              loc='left', fontsize=12, fontweight=0, color='red')
+    plt.xlabel("No. of Features")
+    plt.ylabel("F1 Accuracy")
+    
+    plt.show()
+    
 
 ### TASK 4: Try a varity of classifiers
 def classifiers_try(features_train, features_test, labels_train, labels_test):
@@ -430,6 +494,25 @@ best_features_suggestion(data_dict, features_list)
 features_list.remove('from_poi_to_this_person')
 features_list.remove('from_this_person_to_poi')
 
+
+#Used to test overall F1 score with classifier depending on feature number
+
+## 7 features left
+#features_list.remove('fraction_from_poi')
+##6 features left
+#features_list.remove('loan_advances')
+#features_list.remove('shared_receipt_with_poi')
+##4 features left
+#features_list.remove('total_payments')
+#features_list.remove('fraction_to_poi')
+##2 features left
+#features_list.remove('salary')
+#features_list.remove('bonus')
+
+
+#plot the features test result
+plot_features_list_test()
+
 my_dataset = data_dict
 my_feature_list = features_list
 
@@ -470,11 +553,11 @@ print
 ### http://scikit-learn.org/stable/modules/generated/sklearn.cross_validation.StratifiedShuffleSplit.html
 
 #### import the sklearn modules
-#from sklearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.tree import DecisionTreeClassifier
-#from sklearn.decomposition import PCA
-#from sklearn.model_selection import GridSearchCV
+from sklearn.decomposition import PCA
+
 
 clf = AdaBoostClassifier(DecisionTreeClassifier(min_samples_split=20, max_depth=4),
                         algorithm="SAMME.R",
@@ -482,29 +565,25 @@ clf = AdaBoostClassifier(DecisionTreeClassifier(min_samples_split=20, max_depth=
                         random_state=0)
                
 
-'''
+
 ###Using PCA with AdaBoost
 
-my_steps = [('pca', PCA(n_components = 3) ),
-            ('clf', clf)]
-
-clf = Pipeline(my_steps)
-'''
+#my_steps = [('pca', PCA(n_components = 3) ),
+#            ('clf', clf)]
+#clf = Pipeline(my_steps)
 
 
-'''
 ###Using MinMaxScaler with AdaBoost
-from sklearn.preprocessing import MinMaxScaler
-my_steps = [('scaler', MinMaxScaler() ),
-            ('clf', clf)]
+#from sklearn.preprocessing import MinMaxScaler
+#my_steps = [('scaler', MinMaxScaler() ),
+#            ('clf', clf)]
+#clf = Pipeline(my_steps)
 
-clf = Pipeline(my_steps)
-###using MinMaxScaler-> recall:0.25, Precision:0.40, F1:0.308, with 2 true positives 
-'''
+
 
 print "************************************"
 print "MinMaxScaler unneeded for AdaBoost and dataset"
-print
+print "   (see report for more info)       "
 print "************************************"
 print
 
